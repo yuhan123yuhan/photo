@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>照片智能修图参数助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .box {
+            max-width: 900px;
+            background: white;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px #00000022;
+        }
+        h1 {
+            text-align: center;
+            color: #222;
+            margin-bottom: 30px;
+        }
+        .upload {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background:#667eea;
+            color:white;
+            border:none;
+            padding:10px 22px;
+            border-radius:8px;
+            cursor:pointer;
+            margin-left:10px;
+        }
+        .result{
+            margin-top:30px;
+            display:none;
+        }
+        .row{
+            display:flex;
+            gap:30px;
+            flex-wrap:wrap;
+            justify-content:center;
+        }
+        img{
+            max-width:380px;
+            border-radius:12px;
+        }
+        .info{
+            line-height:2.3;
+            background:#f5f7ff;
+            padding:20px;
+            border-radius:12px;
+            min-width:320px;
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>📸 照片智能修图分析工具</h1>
+    <div class="upload">
+        <input type="file" id="file" accept="image/*">
+        <button onclick="analyze()">一键分析照片</button>
+    </div>
+
+    <div class="result" id="res">
+        <div class="row">
+            <div>
+                <h3 style="text-align:center;margin-bottom:12px">原图</h3>
+                <img id="imgShow">
+            </div>
+            <div class="info" id="tip"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function analyze(){
+    const file = document.getElementById("file").files[0]
+    if(!file) alert("请选择图片")
+
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.crossOrigin = "anonymous"
+    img.src = url
+
+    img.onload = function(){
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+        canvas.width = img.width
+        canvas.height = img.height
+        ctx.drawImage(img,0,0)
+        const data = ctx.getImageData(0,0,canvas.width,canvas.height).data
+
+        let bright = 0,r=0,b=0
+        let list = []
+        for(let i=0;i<data.length;i+=4){
+            let R=data[i],G=data[i+1],B=data[i+2]
+            let br = (R+G+B)/3
+            bright += br
+            list.push(br)
+            r+=R
+            b+=B
+        }
+
+        let avgB = bright/list.length
+        let avgR = r/list.length
+        let avgBl = b/list.length
+
+        //对比度
+        let sum=0
+        list.forEach(v=>sum+=(v-avgB)**2)
+        let contrast = Math.sqrt(sum/list.length)
+
+        let text = ""
+        if(avgB<90) text += "💡画面偏暗\n曝光+22 亮度+18\n"
+        else if(avgB>190) text += "💡画面偏亮\n曝光-18 亮度-15\n"
+        else text += "💡亮度正常\n"
+
+        if(contrast<45) text += "🎛对比度偏低\n对比度+16 阴影+12\n"
+        else if(contrast>75) text += "🎛对比偏高\n对比度-12 高光-10\n"
+        else text += "🎛对比适中\n"
+
+        if(avgR>avgBl+12) text += "🌞偏暖偏红\n色温-14 色调-6\n"
+        else if(avgBl>avgR+12) text += "❄偏冷偏蓝\n色温+12 色调+5\n"
+        else text += "🌤白平衡正常\n"
+
+        text += "\n✨全套修图参数\n饱和度+9\n锐化+14\n清晰度+11"
+
+        document.getElementById("imgShow").src = url
+        document.getElementById("tip").innerText = text
+        document.getElementById("res").style.display="block"
+    }
+}
+</script>
+</body>
+</html>
